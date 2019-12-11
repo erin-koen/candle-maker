@@ -8,16 +8,9 @@ from kraken_wsclient_py import kraken_wsclient_py as kraken_client
 
 class CandleBuilder:
     def __init__(self, db_name):
-        self.table = db_name
+        self.trade_table = db_name
         # self.candle_size = candle_size
         # self.units = unit
-        self.high = None
-        self.low = None
-        self.open = None
-        self.close = None
-        self.volume = 0
-        self.hour = None
-        self.minute = None
 
     def add_candle(self, candle_size, unit):
         # pull from self.everything to send to db
@@ -25,7 +18,7 @@ class CandleBuilder:
 
     def initialize_db(self):
         try:
-            db = sqlite3.connect(self.table)
+            db = sqlite3.connect(self.trade_table)
             print('db connection open')
             cursor = db.cursor()
             cursor.execute('''CREATE TABLE IF NOT EXISTS trades
@@ -54,7 +47,7 @@ class CandleBuilder:
         if type(message) == type(validation):
             print(message)
             try:
-                db = sqlite3.connect(self.table)
+                db = sqlite3.connect(self.trade_table)
 
                 timestamp = float(message[1][0][2])
                 time_object = datetime.fromtimestamp(timestamp)

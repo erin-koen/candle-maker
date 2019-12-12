@@ -1,4 +1,5 @@
 from datetime import datetime
+import time
 import json
 import csv
 import sqlite3
@@ -8,19 +9,54 @@ from kraken_wsclient_py import kraken_wsclient_py as kraken_client
 
 class CandleBuilder:
     def __init__(self, db_name):
-        self.trade_table = db_name
-        # self.candle_size = candle_size
+        self.db_name = db_name
+        self.last_query = None
+        self.trades = []
         # self.units = unit
 
-    def add_candle(self, candle_size, unit):
+    def retrieve_trades(self):
         # pull from self.everything to send to db
-        pass
+        try:
+            db = sqlite3.connect(self.db_name)
+            ts = time.time()
+            # query trades between self.last_query and timestamp inclusive
+            query = f'SELECT * FROM trades WHERE timestamp BETWEEN {self.last_query} AND {ts}'
+            cursor = db.cursor()
+            cursor.execute(query)
+            # return all trades since last query (or query all then delete?) track time in
+            trades = cursor.fetchall()
+            self.trades = trades
+            # set self_last_query to current ts for next round
+            self.last_query = ts
+
+            # assemble candles based on returned array
+            # insert candles into candle table
+        except sqlite3.Error as error:
+            e = error
+            print('Error while retrieving trades, ', error)
+        finally:
+            if trades:
+                return 'Trades were fetched successfully.'
+            elif e:
+                return 'There was an error retrieving the trades, see message.'
+            else:
+                return 'There were no trades since the last fetch.'
+
+    def build_candles(self):
+        if len(self.trades):
+            # check that these trades are newer than your
+            # last candles
+            # build five minute candles 
+            # insert into db
+        else:
+            pass
 
     def initialize_db(self):
         try:
-            db = sqlite3.connect(self.trade_table)
-            print('db connection open')
+            db = sqlite3.connect(self.db_name)
+            print('DB connection open')
             cursor = db.cursor()
+
             cursor.execute('''CREATE TABLE IF NOT EXISTS trades
                 (year int,
                 month int,
@@ -29,9 +65,25 @@ class CandleBuilder:
                 minute int,
                 price float,
                 volume float,
-                currency string)''')
+                currency string,
+                timestamp float)''')
+
+            cursor.execute('''CREATE TABLE IF NOT EXISTS candles
+                (year int,
+                month int,
+                day int,
+                hour int,
+                minute int,
+                timestamp float,
+                high float, 
+                low float, 
+                open float,
+                close float)''')
+
             db.commit()
+
             print('Trade table created.')
+
             cursor.close()
 
         except sqlite3.Error as error:
@@ -47,7 +99,7 @@ class CandleBuilder:
         if type(message) == type(validation):
             print(message)
             try:
-                db = sqlite3.connect(self.trade_table)
+                db = sqlite3.connect(self.db_name)
 
                 timestamp = float(message[1][0][2])
                 time_object = datetime.fromtimestamp(timestamp)
@@ -62,8 +114,8 @@ class CandleBuilder:
 
                 cursor = db.cursor()
 
-                cursor.execute("INSERT INTO trades (year, month, day, hour, minute, price, volume, currency) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (
-                    year, month, day, hour, minute, price, volume, currency))
+                cursor.execute("INSERT INTO trades (year, month, day, hour, minute, price, volume, currency, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (
+                    year, month, day, hour, minute, price, volume, currency, timestamp))
 
                 db.commit()
                 print('Succesfully inserted trade.')

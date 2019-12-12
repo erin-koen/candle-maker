@@ -7,3 +7,13 @@ heartbeat = {'event': 'heartbeat'}
 print(
     type(array) == type(heartbeat)
 )
+
+def fake():
+    try:
+        something = [1,2,3,3,3]
+    except expression as identifier:
+        pass
+    finally:
+        return something
+
+print(fake())
